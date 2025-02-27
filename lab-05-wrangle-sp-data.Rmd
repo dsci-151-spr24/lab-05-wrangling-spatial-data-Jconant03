@@ -1,7 +1,9 @@
 ---
 title: "Lab 05 - La Quinta is Spanish for next to Denny's, Pt. 2"
 subtitle: "Wrangling spatial data"
+author: Jack Conant
 output: 
+  pdf_document: default
   tufte::tufte_html:
     tufte_variant: "envisioned"
     highlight: pygments
@@ -68,6 +70,7 @@ dn_ak <- dennys %>%
   filter(state == "AK")
 nrow(dn_ak)
 ```
+***There are 3 locations in Alaska***
 
 2.  Filter the La Quinta dataframe for Alaska (AK) and save the result as `lq_ak`. How many La Quinta locations are there in Alaska?
 
@@ -76,7 +79,7 @@ lq_ak <- laquinta %>%
   filter(state == "AK")
 nrow(lq_ak)
 ```
-
+***There are 2 La Quinta locations in Alaska***
 Next we'll calculate the distance between all Denny's and all La Quinta locations in Alaska.
 Let's take this step by step:
 
@@ -138,13 +141,13 @@ dn_lq_ak
 ```
 
 4.  How many observations are in the joined `dn_lq_ak` data frame? What are the names of the variables in this data frame.
-
+***There are 6 observations***
 `.x` in the variable names means the variable comes from the `x` data frame (the first argument in the `full_join` call, i.e. `dn_ak`), and `.y` means the variable comes from the `y` data frame.
 These varibles are renamed to include `.x` and `.y` because the two data frames have the same variables and it's not possible to have two variables in a data frame with the exact same name.
 
 Now that we have the data in the format we wanted, all that is left is to calculate the distances between the pairs.
 
-🧶 ✅ ⬆️ Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards.*
+nit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards.*
 
 5.  What function from the tidyverse do we use the add a new variable to a data frame while keeping the existing variables?
 
@@ -176,9 +179,21 @@ This function takes five arguments:
 -   Longitude and latitude of the second location
 -   A parameter by which to round the responses
 
+```{r}
+dn_lq_ak <- dn_lq_ak %>%
+  mutate(
+    distance_km = haversine(longitude.x, latitude.x, longitude.y, latitude.y)
+  )
+```
+
 6.  Calculate the distances between all pairs of Denny's and La Quinta locations and save this variable as `distance`.
     Make sure to save this variable in THE `dn_lq_ak` data frame so that you can use it later.
-
+```{r}
+dn_lq_ak <- dn_lq_ak %>%
+  mutate(
+    distance = haversine(longitude.x, latitude.x, longitude.y, latitude.y)
+  )
+```
 7.  Calculate the minimum distance between a Denny's and La Quinta for each Denny's location.
     To do so we group by Denny's locations and calculate a new variable that stores the information for the minimum distance.
 
@@ -189,16 +204,140 @@ dn_lq_ak_mindist <- dn_lq_ak %>%
 ```
 
 8.  Describe the distribution of the distances Denny's and the nearest La Quinta locations in Alaska. Also include an appripriate visualization and relevant summary statistics.
-
-🧶 ✅ ⬆️ Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards.*
+```{r}
+nearest_distances <- dn_lq_ak %>%
+  group_by(longitude.x) %>%  
+  summarize(min_distance = min(distance))
+```
+```{r}
+ggplot(nearest_distances, aes(x = min_distance)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Distances to Nearest La Quinta from Denny's",
+       x = "Distance (km)", y = "Frequency") +
+  theme_minimal()
+```
+Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards.*
 
 9.  Repeat the same analysis for North Carolina: (i) filter Denny's and La Quinta Data Frames for NC, (ii) join these data frames to get a completelist of all possible pairings, (iii) calculate the distances between all possible pairings of Denny's and La Quinta in NC, (iv) find the minimum distance between each Denny's and La Quinta location, (v) visualize and describe the distribution of these shortest distances using appropriate summary statistics.
 
+```{r}
+dn_nc <- dn_ak %>% filter(state == "NC")
+lq_nc <- lq_ak %>% filter(state == "NC")
+
+
+dn_lq_nc <- full_join(dn_nc, lq_nc, by = "state")
+
+
+dn_lq_nc <- dn_lq_nc %>%
+  mutate(distance_km = haversine(longitude.x, latitude.x, longitude.y, latitude.y))
+
+nearest_distances_nc <- dn_lq_nc %>%
+  group_by(address.x) %>% 
+  summarize(min_distance = min(distance_km))
+
+
+summary_statistics_nc <- nearest_distances_nc %>%
+  summarize(
+    mean_distance = mean(min_distance),
+    median_distance = median(min_distance),
+    sd_distance = sd(min_distance),
+    min_distance = min(min_distance),
+    max_distance = max(min_distance)
+  )
+
+
+print(summary_statistics_nc)
+
+
+library(ggplot2)
+ggplot(nearest_distances_nc, aes(x = min_distance)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Minimum Distances Between Denny's and La Quinta Locations in NC",
+       x = "Distance (km)", y = "Frequency") +
+  theme_minimal()
+```
 10. Repeat the same analysis for Texas.
+```{r}
+dn_tx <- dn_ak %>% filter(state == "TX")
+lq_tx <- lq_ak %>% filter(state == "TX")
+
+
+dn_lq_tx <- full_join(dn_tx, lq_tx, by = "state")
+
+
+dn_lq_tx <- dn_lq_tx %>%
+  mutate(distance_km = haversine(longitude.x, latitude.x, longitude.y, latitude.y))
+
+
+nearest_distances_tx <- dn_lq_tx %>%
+  group_by(address.x) %>%  
+  summarize(min_distance = min(distance_km, na.rm = TRUE)) 
+
+
+
+
+summary_statistics_tx <- nearest_distances_tx %>%
+  summarize(
+    mean_distance = mean(min_distance, na.rm = TRUE),
+    median_distance = median(min_distance, na.rm = TRUE),
+    sd_distance = sd(min_distance, na.rm = TRUE),
+    min_distance = min(min_distance, na.rm = TRUE),
+    max_distance = max(min_distance, na.rm = TRUE)
+  )
+
+
+print(summary_statistics_tx)
+
+
+ggplot(nearest_distances_tx, aes(x = min_distance)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Minimum Distances Between Denny's and La Quinta Locations in TX",
+       x = "Distance (km)", y = "Frequency") +
+  theme_minimal()
+```
 
 11. Repeat the same analysis for a state of your choosing, different than the ones we covered so far.
+```{r}
+dn_ny <- dn_ak %>% filter(state == "NY")
+lq_ny <- lq_ak %>% filter(state == "NY")
+
+
+dn_ny <- full_join(dn_ny, lq_ny, by = "state")
+
+
+
+
+dn_ny <- dn_ny %>%
+  mutate(distance_km = haversine(longitude.x, latitude.x, longitude.y, latitude.y))
+
+
+nearest_distances_ny <- dn_ny %>%
+  group_by(address.x) %>%  
+  summarize(min_distance = min(distance_km, na.rm = TRUE))  # Minimum distance to nearest La Quinta
+
+
+summary_statistics_ny <- nearest_distances_ny %>%
+  summarize(
+    mean_distance = mean(min_distance, na.rm = TRUE),
+    median_distance = median(min_distance, na.rm = TRUE),
+    sd_distance = sd(min_distance, na.rm = TRUE),
+    min_distance = min(min_distance, na.rm = TRUE),
+    max_distance = max(min_distance, na.rm = TRUE)
+  )
+
+
+print(summary_statistics_ny)
+
+
+ggplot(nearest_distances_ny, aes(x = min_distance)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Minimum Distances Between Denny's and La Quinta Locations in NY",
+       x = "Distance (km)", y = "Frequency") +
+  theme_minimal()
+```
 
 12. Among the states you examined, where is Mitch Hedberg's joke most likely to hold true?
     Explain your reasoning.
+***Alaska would most likely fit the joke the most due to the sparse population of Alaska and the distances between locations. Alaska is significantly less dense than the other states mentioned***
 
-🧶 ✅ ⬆️ Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards and review the md document on GitHub to make sure you're happy with the final state of your work.*
+Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards and review the md document on GitHub to make sure you're happy with the final state of your work.*
